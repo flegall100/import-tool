@@ -707,4 +707,48 @@ input[type="number"].form-control-sm {
     letter-spacing: 0.3px;
     padding: 12px 6px;
     word-break: break-word;
+}
+
+/* Custom fields styling */
+.custom-fields-table {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.custom-fields-table .table {
+    margin-bottom: 0;
+}
+
+.custom-fields-editor {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+.custom-fields-editor .table {
+    margin-bottom: 10px;
+    background: white;
+}
+
+.custom-fields-editor .custom-field-name,
+.custom-fields-editor .custom-field-value {
+    font-size: 12px;
+}
+
+.custom-fields-editor .remove-custom-field {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-custom-field {
+    font-size: 13px;
 } 

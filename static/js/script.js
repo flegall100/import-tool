@@ -105,6 +105,48 @@ function generateSourceDisplay(value, field) {
             return html;
             
         case 'json':
+            // Special handling for custom_fields to show as a table
+            console.log('DEBUG: JSON field detected', field.key, 'value:', value, 'isArray:', Array.isArray(value));
+            if (field.key === 'custom_fields' && Array.isArray(value) && value.length > 0) {
+                let tableHtml = `
+                    <div class="custom-fields-table">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40%;">Field Name</th>
+                                    <th style="width: 60%;">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                value.forEach(customField => {
+                    let fieldName = customField.name || 'Unknown';
+                    let fieldValue = customField.value || '';
+                    // Truncate long values for display
+                    let displayValue = fieldValue.length > 100 ? fieldValue.substring(0, 100) + '...' : fieldValue;
+                    
+                    tableHtml += `
+                        <tr>
+                            <td class="fw-bold text-primary">${$('<div>').text(fieldName).html()}</td>
+                            <td>${$('<div>').text(displayValue).html()}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHtml += `
+                            </tbody>
+                        </table>
+                        <small class="text-muted">${value.length} custom field(s)</small>
+                    </div>
+                `;
+                
+                return tableHtml;
+            } else if (field.key === 'custom_fields') {
+                return '<em class="text-muted">No custom fields</em>';
+            }
+            
+            // Default JSON handling for other fields
             try {
                 let jsonStr = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
                 return `<div class="json-display">${$('<div>').text(jsonStr).html()}</div>`;
@@ -161,13 +203,65 @@ function generateTargetInput(value, field) {
             break;
             
         case 'json':
-            let jsonStr = '';
-            try {
-                jsonStr = typeof displayValue === 'string' ? displayValue : JSON.stringify(displayValue, null, 2);
-            } catch (e) {
-                jsonStr = JSON.stringify(displayValue || {}, null, 2);
+            // Special handling for custom_fields to show as an editable table
+            if (field.key === 'custom_fields') {
+                let customFields = Array.isArray(value) ? value : [];
+                
+                inputHtml = `
+                    <div class="custom-fields-editor">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40%;">Field Name</th>
+                                    <th style="width: 50%;">Value</th>
+                                    <th style="width: 10%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="custom-fields-tbody">
+                `;
+                
+                customFields.forEach((customField, index) => {
+                    inputHtml += `
+                        <tr data-index="${index}">
+                            <td>
+                                <input type="text" class="form-control form-control-sm custom-field-name" 
+                                       value="${customField.name || ''}" placeholder="Field name...">
+                            </td>
+                            <td>
+                                <textarea class="form-control form-control-sm custom-field-value" rows="2" 
+                                          placeholder="Field value...">${customField.value || ''}</textarea>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-custom-field" title="Remove field">
+                                    <small>×</small>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                inputHtml += `
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-sm btn-outline-primary add-custom-field">
+                            + Add Custom Field
+                        </button>
+                        <input type="hidden" name="${field.key}" class="custom-fields-hidden" value="${JSON.stringify(customFields)}">
+                        <div class="mt-2">
+                            <small class="text-muted">Custom fields will be automatically updated when you modify the table above.</small>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Default JSON handling for other fields
+                let jsonStr = '';
+                try {
+                    jsonStr = typeof displayValue === 'string' ? displayValue : JSON.stringify(displayValue, null, 2);
+                } catch (e) {
+                    jsonStr = JSON.stringify(displayValue || {}, null, 2);
+                }
+                inputHtml = `<textarea class="form-control form-control-sm" name="${field.key}" rows="4" placeholder="Enter JSON data...">${jsonStr}</textarea>`;
             }
-            inputHtml = `<textarea class="form-control form-control-sm" name="${field.key}" rows="4" placeholder="Enter JSON data...">${jsonStr}</textarea>`;
             break;
             
         case 'textarea':
@@ -466,6 +560,65 @@ $(document).on('click', '.image-preview', function(e) {
     var imageTitle = $(this).data('image-title');
     showImageModal(imageUrl, imageTitle);
 });
+
+// Custom fields editor handlers
+$(document).on('click', '.add-custom-field', function(e) {
+    e.preventDefault();
+    var tbody = $(this).closest('.custom-fields-editor').find('.custom-fields-tbody');
+    var newIndex = tbody.find('tr').length;
+    
+    var newRow = `
+        <tr data-index="${newIndex}">
+            <td>
+                <input type="text" class="form-control form-control-sm custom-field-name" 
+                       value="" placeholder="Field name...">
+            </td>
+            <td>
+                <textarea class="form-control form-control-sm custom-field-value" rows="2" 
+                          placeholder="Field value..."></textarea>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-custom-field" title="Remove field">
+                    <small>×</small>
+                </button>
+            </td>
+        </tr>
+    `;
+    
+    tbody.append(newRow);
+    updateCustomFieldsHidden($(this).closest('.custom-fields-editor'));
+});
+
+$(document).on('click', '.remove-custom-field', function(e) {
+    e.preventDefault();
+    var row = $(this).closest('tr');
+    var editor = $(this).closest('.custom-fields-editor');
+    row.remove();
+    updateCustomFieldsHidden(editor);
+});
+
+$(document).on('input', '.custom-field-name, .custom-field-value', function() {
+    var editor = $(this).closest('.custom-fields-editor');
+    updateCustomFieldsHidden(editor);
+});
+
+function updateCustomFieldsHidden(editor) {
+    var customFields = [];
+    
+    editor.find('.custom-fields-tbody tr').each(function() {
+        var name = $(this).find('.custom-field-name').val().trim();
+        var value = $(this).find('.custom-field-value').val().trim();
+        
+        if (name || value) { // Only add if name or value is not empty
+            customFields.push({
+                name: name,
+                value: value
+            });
+        }
+    });
+    
+    editor.find('.custom-fields-hidden').val(JSON.stringify(customFields));
+}
 
     // Update Target Store button click
     $(document).on('click', '#update-target-btn', function(e) {
