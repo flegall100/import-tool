@@ -74,13 +74,26 @@ class BigCommerceAPI:
         """Update an existing product in BigCommerce store by product ID"""
         try:
             url = f"{self.base_url}/catalog/products/{product_id}"
+            print(f"=== DEBUG: BigCommerce API update_product ===")
+            print(f"  URL: {url}")
+            print(f"  Product ID: {product_id}")
+            print(f"  Request data: {product_data}")
+            print(f"  Headers: {self.headers}")
+            
             response = requests.put(url, headers=self.headers, json=product_data)
+            
+            print(f"=== DEBUG: HTTP Response ===")
+            print(f"  Status Code: {response.status_code}")
+            print(f"  Response headers: {dict(response.headers)}")
+            print(f"  Response body: {response.text}")
+            
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error updating product: {e}")
             if hasattr(e, 'response') and e.response is not None:
                 print(f"Response content: {e.response.text}")
+                print(f"=== DEBUG: Error response status: {e.response.status_code} ===")
             return None
     
     def get_brand_name(self, brand_id: int) -> str:
@@ -336,10 +349,17 @@ class ProductImporter:
     def update_target_product(self, store_name: str, sku: str, update_data: Dict[str, Any]) -> bool:
         """Update a product in the target store with the provided data"""
         try:
+            print(f"=== DEBUG: update_target_product called ===")
+            print(f"  store_name: {store_name}")
+            print(f"  sku: {sku}")
+            print(f"  update_data: {update_data}")
+            
             store = self.get_store_by_name(store_name)
             if not store:
                 print(f"❌ Store '{store_name}' not found")
                 return False
+            
+            print(f"=== DEBUG: Store object retrieved successfully: {type(store)} ===")
             
             # Get the existing product
             existing_product = store.get_product_by_sku(sku)
@@ -347,8 +367,14 @@ class ProductImporter:
                 print(f"❌ Product with SKU '{sku}' not found in store '{store_name}'")
                 return False
             
+            print(f"=== DEBUG: Found existing product: {existing_product.get('name')} (ID: {existing_product.get('id')}) ===")
+            print(f"=== DEBUG: existing_product type: {type(existing_product)} ===")
+            print(f"=== DEBUG: existing_product keys: {list(existing_product.keys()) if existing_product else 'None'} ===")
+            
             # Prepare the update data
             update_payload = {}
+            
+            print(f"=== DEBUG: Initializing update_payload: {type(update_payload)} ===")
             
             # Map the form fields to BigCommerce API fields
             field_mapping = {
@@ -368,29 +394,62 @@ class ProductImporter:
                 'images': 'images'
             }
             
+            print(f"=== DEBUG: Starting field mapping process ===")
+            
             for form_field, api_field in field_mapping.items():
                 if form_field in update_data:
                     value = update_data[form_field]
+                    print(f"=== DEBUG: Processing field mapping: {form_field} -> {api_field} = '{value}' ===")
                     
-                    # Handle special cases
-                    if form_field == 'price' and value:
-                        update_payload[api_field] = str(value)
-                    elif form_field == 'weight' and value:
-                        update_payload[api_field] = float(value)
-                    elif form_field in ['width', 'height', 'depth'] and value:
-                        update_payload[api_field] = float(value)
-                    elif form_field == 'brand' and value:
-                        # For brand, we need to find the brand ID or create it
-                        # For now, just set the brand name
-                        update_payload['brand_name'] = value
-                    elif form_field in ['custom_fields', 'images'] and value:
-                        # These are complex objects, pass them through
-                        update_payload[api_field] = value
-                    elif value:  # For other fields, only update if value exists
-                        update_payload[api_field] = value
+                    try:
+                        # Handle special cases
+                        if form_field == 'price' and value:
+                            update_payload[api_field] = str(value)
+                            print(f"=== DEBUG: Set price as string: '{str(value)}' ===")
+                        elif form_field == 'weight' and value:
+                            update_payload[api_field] = float(value)
+                            print(f"=== DEBUG: Set weight as float: {float(value)} ===")
+                        elif form_field in ['width', 'height', 'depth'] and value:
+                            update_payload[api_field] = float(value)
+                            print(f"=== DEBUG: Set {form_field} as float: {float(value)} ===")
+                        elif form_field == 'brand' and value:
+                            # For brand, we need to find the brand ID or create it
+                            # For now, just set the brand name
+                            update_payload['brand_name'] = value
+                            print(f"=== DEBUG: Set brand_name: '{value}' ===")
+                        elif form_field in ['custom_fields', 'images'] and value:
+                            # These are complex objects, pass them through
+                            update_payload[api_field] = value
+                            print(f"=== DEBUG: Set {form_field} as object: {value} ===")
+                        elif value:  # For other fields, only update if value exists
+                            update_payload[api_field] = value
+                            print(f"=== DEBUG: Set {form_field}: '{value}' ===")
+                        else:
+                            print(f"=== DEBUG: Skipped {form_field} because value is empty/falsy ===")
+                            
+                        print(f"=== DEBUG: update_payload after {form_field}: {update_payload} ===")
+                        
+                    except Exception as field_error:
+                        print(f"=== DEBUG: Error processing field {form_field}: {field_error} ===")
+                        print(f"=== DEBUG: update_payload type: {type(update_payload)} ===")
+                        print(f"=== DEBUG: api_field: {api_field} ===")
+                        print(f"=== DEBUG: value: {value} (type: {type(value)}) ===")
+                        raise field_error
+            
+            print(f"=== DEBUG: Final update_payload to send to BigCommerce: {update_payload} ===")
+            
+            # Check that we have a valid product ID
+            product_id = existing_product.get('id')
+            if not product_id:
+                print(f"❌ No product ID found in existing product data")
+                return False
+                
+            print(f"=== DEBUG: About to call store.update_product with ID: {product_id} ===")
             
             # Update the product
-            result = store.update_product(existing_product['id'], update_payload)
+            result = store.update_product(product_id, update_payload)
+            
+            print(f"=== DEBUG: BigCommerce API response: {result} ===")
             
             if result and result.get("data"):
                 print(f"✅ Successfully updated product {sku} in store {store_name}")
@@ -401,6 +460,10 @@ class ProductImporter:
                 
         except Exception as e:
             print(f"❌ Error updating product {sku} in store {store_name}: {e}")
+            print(f"=== DEBUG: Exception details: {type(e).__name__}: {str(e)} ===")
+            import traceback
+            print(f"=== DEBUG: Full traceback: ===")
+            traceback.print_exc()
             return False
 
 def main():
