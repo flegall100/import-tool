@@ -193,7 +193,7 @@ function generateTargetInput(value, field) {
                     </div>
                     <div class="drop-zone" style="border: 2px dashed #dee2e6; border-radius: 6px; padding: 15px; text-align: center; cursor: pointer; background: #f8f9fa; min-height: 50px; transition: all 0.2s;">
                         <div class="drop-zone-text">
-                            <small style="color: #6c757d;">📁 Click to upload or drag images here</small>
+                            <small style="color: #6c757d;">Click to upload or drag images here</small>
                         </div>
                         <input type="file" class="image-file-input" multiple accept="image/*" style="display:none;">
                     </div>
@@ -221,11 +221,20 @@ function generateTargetInput(value, field) {
                 `;
                 
                 customFields.forEach((customField, index) => {
+                    let isExisting = customField.id ? true : false;
+                    let statusBadge = isExisting 
+                        ? '<span class="badge bg-secondary" style="font-size: 9px;">EXISTING</span>' 
+                        : '<span class="badge bg-success" style="font-size: 9px;">NEW</span>';
+                    
                     inputHtml += `
                         <tr data-index="${index}">
                             <td>
-                                <input type="text" class="form-control form-control-sm custom-field-name" 
-                                       value="${customField.name || ''}" placeholder="Field name...">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="text" class="form-control form-control-sm custom-field-name" 
+                                           value="${customField.name || ''}" placeholder="Field name..." style="flex: 1;">
+                                    ${statusBadge}
+                                </div>
+                                <input type="hidden" class="custom-field-id" value="${customField.id || ''}">
                             </td>
                             <td>
                                 <textarea class="form-control form-control-sm custom-field-value" rows="2" 
@@ -248,7 +257,10 @@ function generateTargetInput(value, field) {
                         </button>
                         <input type="hidden" name="${field.key}" class="custom-fields-hidden" value="${JSON.stringify(customFields)}">
                         <div class="mt-2">
-                            <small class="text-muted">Custom fields will be automatically updated when you modify the table above.</small>
+                            <small class="text-muted">
+                                <strong>EXISTING</strong> fields will update the original custom field in BigCommerce. 
+                                <strong>NEW</strong> fields will create new custom fields. Changes are saved automatically.
+                            </small>
                         </div>
                     </div>
                 `;
@@ -355,7 +367,7 @@ $('#compare-form').on('submit', function(e) {
                 let warningHtml = '';
                 if (data.warning) {
                     warningHtml = `<div class="alert alert-warning" style="margin-bottom: 20px;">
-                        <strong>⚠️ Notice:</strong> ${data.warning}
+                        <strong>Notice:</strong> ${data.warning}
                     </div>`;
                 }
                 
@@ -395,7 +407,7 @@ $('#compare-form').on('submit', function(e) {
                 $('.sync-checkbox').prop('checked', true);
                 } else {
                 // Show specific error message from backend
-                $('#compare-result').html('<div class="alert alert-danger"><strong>❌ Error:</strong> ' + (data.error || 'Compare failed.') + '</div>');
+                $('#compare-result').html('<div class="alert alert-danger"><strong>Error:</strong> ' + (data.error || 'Compare failed.') + '</div>');
         }
     }).fail(function(xhr) {
             $('#compare-result').html('<div class="alert alert-danger">' + (xhr.responseJSON?.error || 'Compare failed.') + '</div>');
@@ -514,21 +526,21 @@ $(document).on('dragover', '.drop-zone', function(e) {
     e.preventDefault();
     $(this).css('border-color', '#007bff');
     $(this).css('background-color', '#e3f2fd');
-    $(this).find('.drop-zone-text').html('<small style="color: #007bff;"><strong>📤 Drop images here</strong></small>');
+    $(this).find('.drop-zone-text').html('<small style="color: #007bff;"><strong>Drop images here</strong></small>');
 });
 
 $(document).on('dragleave', '.drop-zone', function(e) {
     e.preventDefault();
     $(this).css('border-color', '#dee2e6');
     $(this).css('background-color', '#f8f9fa');
-    $(this).find('.drop-zone-text').html('<small style="color: #6c757d;">📁 Click to upload or drag images here</small>');
+    $(this).find('.drop-zone-text').html('<small style="color: #6c757d;">Click to upload or drag images here</small>');
 });
 
 $(document).on('drop', '.drop-zone', function(e) {
     e.preventDefault();
     $(this).css('border-color', '#28a745');
     $(this).css('background-color', '#d4edda');
-    $(this).find('.drop-zone-text').html('<small style="color: #155724;"><strong>✅ Processing images...</strong></small>');
+    $(this).find('.drop-zone-text').html('<small style="color: #155724;"><strong>Processing images...</strong></small>');
     var files = e.originalEvent.dataTransfer.files;
     handleImageFiles(files, $(this).closest('.image-upload-zone'));
     
@@ -536,7 +548,7 @@ $(document).on('drop', '.drop-zone', function(e) {
     setTimeout(() => {
         $(this).css('border-color', '#dee2e6');
         $(this).css('background-color', '#f8f9fa');
-        $(this).find('.drop-zone-text').html('<small style="color: #6c757d;">📁 Click to upload or drag images here</small>');
+        $(this).find('.drop-zone-text').html('<small style="color: #6c757d;">Click to upload or drag images here</small>');
     }, 2000);
 });
 
@@ -570,8 +582,12 @@ $(document).on('click', '.add-custom-field', function(e) {
     var newRow = `
         <tr data-index="${newIndex}">
             <td>
-                <input type="text" class="form-control form-control-sm custom-field-name" 
-                       value="" placeholder="Field name...">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="text" class="form-control form-control-sm custom-field-name" 
+                           value="" placeholder="Field name..." style="flex: 1;">
+                    <span class="badge bg-success" style="font-size: 9px;">NEW</span>
+                </div>
+                <input type="hidden" class="custom-field-id" value="">
             </td>
             <td>
                 <textarea class="form-control form-control-sm custom-field-value" rows="2" 
@@ -608,12 +624,20 @@ function updateCustomFieldsHidden(editor) {
     editor.find('.custom-fields-tbody tr').each(function() {
         var name = $(this).find('.custom-field-name').val().trim();
         var value = $(this).find('.custom-field-value').val().trim();
+        var id = $(this).find('.custom-field-id').val().trim();
         
         if (name || value) { // Only add if name or value is not empty
-            customFields.push({
+            var fieldData = {
                 name: name,
                 value: value
-            });
+            };
+            
+            // Preserve the original ID if it exists (for updating existing fields)
+            if (id) {
+                fieldData.id = parseInt(id);
+            }
+            
+            customFields.push(fieldData);
         }
     });
     

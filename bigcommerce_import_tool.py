@@ -253,13 +253,13 @@ class ProductImporter:
     
     def import_product_by_sku(self, sku: str, show_details: bool = True, update_if_exists: bool = False) -> bool:
         """Import a product from source store to destination store using SKU. Update if exists if flag is set."""
-        print(f"\n🔍 Searching for product with SKU: {sku}")
+        print(f"\nSearching for product with SKU: {sku}")
         # Get product from source store
         source_product = self.source_store.get_product_by_sku(sku)
         if not source_product:
-            print(f"❌ Product with SKU '{sku}' not found in source store")
+            print(f"Product with SKU '{sku}' not found in source store")
             return False
-        print(f"✅ Found product: {source_product.get('name', 'Unknown')}")
+        print(f"Found product: {source_product.get('name', 'Unknown')}")
         # Extract required fields
         extracted_data = self.extract_product_fields(source_product)
         if show_details:
@@ -267,35 +267,35 @@ class ProductImporter:
         # Check if product already exists in destination store
         existing_product = self.dest_store.get_product_by_sku(sku)
         if existing_product:
-            print(f"⚠️  Product with SKU '{sku}' already exists in destination store")
+            print(f"Product with SKU '{sku}' already exists in destination store")
             print(f"   Existing product: {existing_product.get('name', 'Unknown')}")
             if update_if_exists:
                 # Prepare data for update
                 update_data = self.prepare_product_for_import(extracted_data)
-                print(f"✏️  Updating product in destination store...")
+                print(f"Updating product in destination store...")
                 result = self.dest_store.update_product(existing_product['id'], update_data)
                 if result and result.get("data"):
-                    print(f"✅ Successfully updated product!")
+                    print(f"Successfully updated product!")
                     print(f"   Updated product ID: {result['data'].get('id')}")
                     print(f"   Product name: {result['data'].get('name')}")
                     return True
                 else:
-                    print(f"❌ Failed to update product")
+                    print(f"Failed to update product")
                     return False
             else:
                 return False
         # Prepare data for import
         import_data = self.prepare_product_for_import(extracted_data)
-        print(f"📤 Importing product to destination store...")
+        print(f"Importing product to destination store...")
         # Create product in destination store
         result = self.dest_store.create_product(import_data)
         if result and result.get("data"):
-            print(f"✅ Successfully imported product!")
+            print(f"Successfully imported product!")
             print(f"   New product ID: {result['data'].get('id')}")
             print(f"   Product name: {result['data'].get('name')}")
             return True
         else:
-            print(f"❌ Failed to import product")
+            print(f"Failed to import product")
             return False
     
     def display_product_details(self, product_data: Dict[str, Any]):
@@ -316,13 +316,13 @@ class ProductImporter:
             target_store = self.get_store_by_name(target_store_name)
             
             if not source_store or not target_store:
-                print(f"❌ Invalid store names: {source_store_name}, {target_store_name}")
+                print(f"Invalid store names: {source_store_name}, {target_store_name}")
                 return False
             
             # Get product from source store
             source_product = source_store.get_product_by_sku(sku)
             if not source_product:
-                print(f"❌ Product with SKU '{sku}' not found in source store")
+                print(f"Product with SKU '{sku}' not found in source store")
                 return False
             
             # Check if product already exists in target store
@@ -334,7 +334,7 @@ class ProductImporter:
                     result = target_store.update_product(existing_product['id'], update_data)
                     return result and result.get("data") is not None
                 else:
-                    print(f"❌ Product with SKU '{sku}' already exists in target store")
+                    print(f"Product with SKU '{sku}' already exists in target store")
                     return False
             
             # Create new product
@@ -343,7 +343,7 @@ class ProductImporter:
             return result and result.get("data") is not None
             
         except Exception as e:
-            print(f"❌ Error importing product {sku}: {e}")
+            print(f"Error importing product {sku}: {e}")
             return False
 
     def update_target_product(self, store_name: str, sku: str, update_data: Dict[str, Any]) -> bool:
@@ -356,7 +356,7 @@ class ProductImporter:
             
             store = self.get_store_by_name(store_name)
             if not store:
-                print(f"❌ Store '{store_name}' not found")
+                print(f"Store '{store_name}' not found")
                 return False
             
             print(f"=== DEBUG: Store object retrieved successfully: {type(store)} ===")
@@ -364,7 +364,7 @@ class ProductImporter:
             # Get the existing product
             existing_product = store.get_product_by_sku(sku)
             if not existing_product:
-                print(f"❌ Product with SKU '{sku}' not found in store '{store_name}'")
+                print(f"Product with SKU '{sku}' not found in store '{store_name}'")
                 return False
             
             print(f"=== DEBUG: Found existing product: {existing_product.get('name')} (ID: {existing_product.get('id')}) ===")
@@ -441,7 +441,7 @@ class ProductImporter:
             # Check that we have a valid product ID
             product_id = existing_product.get('id')
             if not product_id:
-                print(f"❌ No product ID found in existing product data")
+                print(f"No product ID found in existing product data")
                 return False
                 
             print(f"=== DEBUG: About to call store.update_product with ID: {product_id} ===")
@@ -452,14 +452,14 @@ class ProductImporter:
             print(f"=== DEBUG: BigCommerce API response: {result} ===")
             
             if result and result.get("data"):
-                print(f"✅ Successfully updated product {sku} in store {store_name}")
+                print(f"Successfully updated product {sku} in store {store_name}")
                 return True
             else:
-                print(f"❌ Failed to update product {sku} in store {store_name}")
+                print(f"Failed to update product {sku} in store {store_name}")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error updating product {sku} in store {store_name}: {e}")
+            print(f"Error updating product {sku} in store {store_name}: {e}")
             print(f"=== DEBUG: Exception details: {type(e).__name__}: {str(e)} ===")
             import traceback
             print(f"=== DEBUG: Full traceback: ===")
@@ -486,7 +486,7 @@ def main():
     
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
-        print("❌ Missing required environment variables:")
+        print("Missing required environment variables:")
         for var in missing_vars:
             print(f"   - {var}")
         print("\nPlease copy .env.example to .env and fill in your BigCommerce API credentials.")

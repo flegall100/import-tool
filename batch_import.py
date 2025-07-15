@@ -22,10 +22,10 @@ def read_skus_from_file(filename: str) -> list:
             skus = [line.strip() for line in f if line.strip() and not line.startswith('#')]
         return skus
     except FileNotFoundError:
-        print(f"❌ File not found: {filename}")
+        print(f"File not found: {filename}")
         return []
     except Exception as e:
-        print(f"❌ Error reading file {filename}: {e}")
+        print(f"Error reading file {filename}: {e}")
         return []
 
 def main():
@@ -46,14 +46,14 @@ def main():
             filename = sys.argv[file_index + 1]
             skus = read_skus_from_file(filename)
         else:
-            print("❌ Please specify a filename after --file")
+            print("Please specify a filename after --file")
             sys.exit(1)
     else:
         # Get SKUs from command line (excluding flags)
         skus = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
     
     if not skus:
-        print("❌ No SKUs provided")
+        print("No SKUs provided")
         sys.exit(1)
     
     print(f"🚀 Starting batch import of {len(skus)} products...")
@@ -69,7 +69,7 @@ def main():
     # Import each product
     for i, sku in enumerate(skus, 1):
         print(f"\n{'='*50}")
-        print(f"📦 Processing {i}/{len(skus)}: {sku}")
+        print(f"Processing {i}/{len(skus)}: {sku}")
         print(f"{'='*50}")
         
         try:
@@ -79,7 +79,7 @@ def main():
             else:
                 failed_imports.append(sku)
         except Exception as e:
-            print(f"❌ Unexpected error importing {sku}: {e}")
+            print(f"Unexpected error importing {sku}: {e}")
             failed_imports.append(sku)
         
         # Add a small delay between imports to be respectful to the API
@@ -88,19 +88,19 @@ def main():
     
     # Print final summary
     print(f"\n{'='*60}")
-    print(f"📊 BATCH IMPORT SUMMARY")
+    print(f"BATCH IMPORT SUMMARY")
     print(f"{'='*60}")
-    print(f"✅ Successful imports: {len(successful_imports)}")
-    print(f"❌ Failed imports: {len(failed_imports)}")
-    print(f"📈 Success rate: {len(successful_imports)/len(skus)*100:.1f}%")
+    print(f"Successful imports: {len(successful_imports)}")
+    print(f"Failed imports: {len(failed_imports)}")
+    print(f"Success rate: {len(successful_imports)/len(skus)*100:.1f}%")
     
     if successful_imports:
-        print(f"\n✅ Successfully imported SKUs:")
+        print(f"\nSuccessfully imported SKUs:")
         for sku in successful_imports:
             print(f"   - {sku}")
     
     if failed_imports:
-        print(f"\n❌ Failed to import SKUs:")
+        print(f"\nFailed to import SKUs:")
         for sku in failed_imports:
             print(f"   - {sku}")
     
