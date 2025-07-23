@@ -22,14 +22,17 @@ function generateComparisonTable(fieldConfig, sourceData, targetData, sourceStor
                     <table class="table">
                         <thead>
                             <tr>
-                                <th style="width: 30px;">Field</th>
-                                <th style="width: 35%;" class="text-center">
+                                <th style="width: 25px;">Field</th>
+                                <th style="width: 30%;" class="text-center">
                                     ${sourceStoreName}
+                                </th>
+                                <th style="width: 25px;" class="text-center">
+                                    Transfer
                                 </th>
                                 <th style="width: 25px;" class="text-center">
                                     Sync
                                 </th>
-                                <th style="width: 35%;" class="text-center">
+                                <th style="width: 30%;" class="text-center">
                                     ${targetStoreName}
                                 </th>
                             </tr>
@@ -46,6 +49,16 @@ function generateComparisonTable(fieldConfig, sourceData, targetData, sourceStor
         
         // Generate target input (editable)
         let targetInput = generateTargetInput(targetValue, field);
+        
+        // Generate transfer button
+        let transferButton = `
+            <div class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-success transfer-field-btn" 
+                        data-field="${field.key}" title="Transfer this field from source to target">
+                    →
+                </button>
+            </div>
+        `;
         
         // Generate sync checkbox
         let syncCheckbox = `
@@ -65,6 +78,7 @@ function generateComparisonTable(fieldConfig, sourceData, targetData, sourceStor
             <tr class="field-row" data-field="${field.key}">
                 <td class="fw-bold text-muted">${field.label}</td>
                 <td class="source-cell">${sourceDisplay}</td>
+                <td class="transfer-cell">${transferButton}</td>
                 <td class="sync-cell">${syncCheckbox}</td>
                 <td class="target-cell">${targetInput}</td>
             </tr>
@@ -82,28 +96,6 @@ function generateSourceDisplay(value, field) {
     }
     
     switch (field.type) {
-        case 'images':
-            let images = Array.isArray(value) ? value : [];
-            if (images.length === 0) {
-                return '<em class="text-muted">No images</em>';
-            }
-            let html = '<div class="d-flex flex-wrap gap-1">';
-            images.forEach((img, index) => {
-                let imgUrl = img.url_standard || img.url_zoom || img.url_thumbnail;
-                html += `
-                    <div class="position-relative">
-                        <img src="${imgUrl}" 
-                             class="image-thumbnail-small image-preview" 
-                             data-image-url="${imgUrl}"
-                             data-image-title="Source Image ${index + 1}"
-                             title="Click to view full size"
-                             style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;">
-                    </div>
-                `;
-            });
-            html += `<small class="text-muted d-block mt-1">${images.length} image(s)</small></div>`;
-            return html;
-            
         case 'json':
             // Special handling for custom_fields to show as a table
             console.log('DEBUG: JSON field detected', field.key, 'value:', value, 'isArray:', Array.isArray(value));
@@ -123,8 +115,8 @@ function generateSourceDisplay(value, field) {
                 value.forEach(customField => {
                     let fieldName = customField.name || 'Unknown';
                     let fieldValue = customField.value || '';
-                    // Truncate long values for display
-                    let displayValue = fieldValue.length > 100 ? fieldValue.substring(0, 100) + '...' : fieldValue;
+                    // Show full values without truncation
+                    let displayValue = fieldValue;
                     
                     tableHtml += `
                         <tr>
@@ -177,31 +169,6 @@ function generateTargetInput(value, field) {
     let displayValue = value || '';
     
     switch (field.type) {
-        case 'images':
-            let images = Array.isArray(value) ? value : [];
-            inputHtml = `
-                <div class="image-upload-zone" data-field="images">
-                    <div class="current-images" style="margin-bottom: 10px;">
-                        ${images.length > 0 ? images.map((img, index) => 
-                            `<div style="position: relative; display: inline-block; margin-right: 8px; margin-bottom: 8px;">
-                                <img src="${img.url_standard || img.url_zoom || img.url_thumbnail}" 
-                                     class="image-thumbnail-small" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 2px solid #e0e0e0;">
-                                <button type="button" class="remove-image-btn" 
-                                        data-index="${index}" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
-                            </div>`
-                        ).join('') : '<em style="color: #666;">No images</em>'}
-                    </div>
-                    <div class="drop-zone" style="border: 2px dashed #dee2e6; border-radius: 6px; padding: 15px; text-align: center; cursor: pointer; background: #f8f9fa; min-height: 50px; transition: all 0.2s;">
-                        <div class="drop-zone-text">
-                            <small style="color: #6c757d;">Click to upload or drag images here</small>
-                        </div>
-                        <input type="file" class="image-file-input" multiple accept="image/*" style="display:none;">
-                    </div>
-                    <input type="hidden" name="images" value="${JSON.stringify(images)}">
-                </div>
-            `;
-            break;
-            
         case 'json':
             // Special handling for custom_fields to show as an editable table
             if (field.key === 'custom_fields') {
@@ -209,12 +176,12 @@ function generateTargetInput(value, field) {
                 
                 inputHtml = `
                     <div class="custom-fields-editor">
-                        <table class="table table-sm table-bordered">
+                        <table class="table table-bordered">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 40%;">Field Name</th>
-                                    <th style="width: 50%;">Value</th>
-                                    <th style="width: 10%;">Action</th>
+                                    <th>Field Name</th>
+                                    <th>Value</th>
+                                    <th style="width: 100px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="custom-fields-tbody">
@@ -227,22 +194,20 @@ function generateTargetInput(value, field) {
                         : '<span class="badge bg-success" style="font-size: 9px;">NEW</span>';
                     
                     inputHtml += `
-                        <tr data-index="${index}">
+                        <tr class="custom-field-row" data-index="${index}">
                             <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="text" class="form-control form-control-sm custom-field-name" 
-                                           value="${customField.name || ''}" placeholder="Field name..." style="flex: 1;">
-                                    ${statusBadge}
-                                </div>
+                                <input type="text" class="form-control custom-field-name" 
+                                       value="${customField.name || ''}" placeholder="Field name...">
+                                ${statusBadge}
                                 <input type="hidden" class="custom-field-id" value="${customField.id || ''}">
                             </td>
                             <td>
-                                <textarea class="form-control form-control-sm custom-field-value" rows="2" 
-                                          placeholder="Field value...">${customField.value || ''}</textarea>
+                                <input type="text" class="form-control custom-field-value" 
+                                          placeholder="Field value..." value="${customField.value || ''}">
                             </td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-danger remove-custom-field" title="Remove field">
-                                    <small>×</small>
+                                    ×
                                 </button>
                             </td>
                         </tr>
@@ -356,8 +321,7 @@ $('#compare-form').on('submit', function(e) {
                     {key: 'width', label: 'Width', type: 'number'},
                     {key: 'height', label: 'Height', type: 'number'},
                     {key: 'depth', label: 'Depth', type: 'number'},
-                    {key: 'custom_fields', label: 'Custom Fields', type: 'json'},
-                    {key: 'images', label: 'Images', type: 'images'}
+                    {key: 'custom_fields', label: 'Custom Fields', type: 'json'}
             ];
                 
                 // Generate modular comparison table
@@ -384,6 +348,9 @@ $('#compare-form').on('submit', function(e) {
                                         </button>
                                         <button type="button" class="btn btn-outline" id="deselect-all-sync">
                                             Deselect All
+                                        </button>
+                                        <button type="button" class="btn btn-success" id="transfer-all-btn">
+                                            Transfer All →
                                         </button>
                         </div>
                                     <div class="sync-controls-right">
@@ -514,64 +481,69 @@ $('#batch-import-form').on('submit', function(e) {
     $(document).on('click', '#deselect-all-sync', function() {
         $('.sync-checkbox').prop('checked', false).trigger('change');
         updateSyncSummary();
-});
-
-// Drag and drop functionality
-    $(document).on('click', '.drop-zone', function(e) {
-        e.preventDefault();
-    $(this).find('.image-file-input').click();
-});
-
-$(document).on('dragover', '.drop-zone', function(e) {
-    e.preventDefault();
-    $(this).css('border-color', '#007bff');
-    $(this).css('background-color', '#e3f2fd');
-    $(this).find('.drop-zone-text').html('<small style="color: #007bff;"><strong>Drop images here</strong></small>');
-});
-
-$(document).on('dragleave', '.drop-zone', function(e) {
-    e.preventDefault();
-    $(this).css('border-color', '#dee2e6');
-    $(this).css('background-color', '#f8f9fa');
-    $(this).find('.drop-zone-text').html('<small style="color: #6c757d;">Click to upload or drag images here</small>');
-});
-
-$(document).on('drop', '.drop-zone', function(e) {
-    e.preventDefault();
-    $(this).css('border-color', '#28a745');
-    $(this).css('background-color', '#d4edda');
-    $(this).find('.drop-zone-text').html('<small style="color: #155724;"><strong>Processing images...</strong></small>');
-    var files = e.originalEvent.dataTransfer.files;
-    handleImageFiles(files, $(this).closest('.image-upload-zone'));
+    });
     
-    // Reset after a moment
-    setTimeout(() => {
-        $(this).css('border-color', '#dee2e6');
-        $(this).css('background-color', '#f8f9fa');
-        $(this).find('.drop-zone-text').html('<small style="color: #6c757d;">Click to upload or drag images here</small>');
-    }, 2000);
-});
+    // Transfer All functionality
+    $(document).on('click', '#transfer-all-btn', function() {
+        // Transfer all values from source (Product A) to target (Product B)
+        $('.field-row').each(function() {
+            var row = $(this);
+            var sourceCell = row.find('.source-cell');
+            var targetCell = row.find('.target-cell');
+            var targetInput = targetCell.find('input, textarea');
+            
+            if (targetInput.length > 0) {
+                // Get the source value based on the field type
+                var sourceValue = getSourceValue(sourceCell, targetInput);
+                if (sourceValue !== null && sourceValue !== undefined) {
+                    targetInput.val(sourceValue);
+                    // Trigger change event for any listeners
+                    targetInput.trigger('change');
+                }
+            }
+        });
+        
+        // Also handle custom fields if they exist
+        transferCustomFields();
+        
+        // Show confirmation message
+        showTransferConfirmation();
+    });
+    
+    // Individual field transfer functionality
+    $(document).on('click', '.transfer-field-btn', function() {
+        var button = $(this);
+        var fieldKey = button.data('field');
+        var row = button.closest('.field-row');
+        var sourceCell = row.find('.source-cell');
+        var targetCell = row.find('.target-cell');
+        var targetInput = targetCell.find('input, textarea');
+        
+        if (targetInput.length > 0) {
+            // Get the source value based on the field type
+            var sourceValue = getSourceValue(sourceCell, targetInput);
+            if (sourceValue !== null && sourceValue !== undefined) {
+                // For images, getSourceValue handles everything internally
+                if (sourceValue !== true) {
+                    targetInput.val(sourceValue);
+                    // Trigger change event for any listeners
+                    targetInput.trigger('change');
+                }
+                
+                // Show brief visual feedback
+                button.removeClass('btn-outline-success').addClass('btn-success');
+                setTimeout(function() {
+                    button.removeClass('btn-success').addClass('btn-outline-success');
+                }, 500);
+            }
+        }
+        
+        // Handle custom fields for this specific field if it's custom fields
+        if (fieldKey === 'custom_fields') {
+            transferCustomFields();
+        }
+    });
 
-$(document).on('change', '.image-file-input', function() {
-    var files = this.files;
-    handleImageFiles(files, $(this).closest('.image-upload-zone'));
-});
-
-// Remove image button handler
-    $(document).on('click', '.remove-image-btn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var index = parseInt($(this).data('index'));
-    removeImage(this, index);
-});
-
-// Image preview handler
-$(document).on('click', '.image-preview', function(e) {
-    e.preventDefault();
-    var imageUrl = $(this).data('image-url');
-    var imageTitle = $(this).data('image-title');
-    showImageModal(imageUrl, imageTitle);
-});
 
 // Custom fields editor handlers
 $(document).on('click', '.add-custom-field', function(e) {
@@ -580,22 +552,20 @@ $(document).on('click', '.add-custom-field', function(e) {
     var newIndex = tbody.find('tr').length;
     
     var newRow = `
-        <tr data-index="${newIndex}">
+        <tr class="custom-field-row" data-index="${newIndex}">
             <td>
-                <div class="d-flex align-items-center gap-2">
-                    <input type="text" class="form-control form-control-sm custom-field-name" 
-                           value="" placeholder="Field name..." style="flex: 1;">
-                    <span class="badge bg-success" style="font-size: 9px;">NEW</span>
-                </div>
+                <input type="text" class="form-control custom-field-name" 
+                       value="" placeholder="Field name...">
+                <span class="badge bg-success" style="font-size: 9px;">NEW</span>
                 <input type="hidden" class="custom-field-id" value="">
             </td>
             <td>
-                <textarea class="form-control form-control-sm custom-field-value" rows="2" 
-                          placeholder="Field value..."></textarea>
+                <input type="text" class="form-control custom-field-value" 
+                          placeholder="Field value...">
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-outline-danger remove-custom-field" title="Remove field">
-                    <small>×</small>
+                    ×
                 </button>
             </td>
         </tr>
@@ -765,127 +735,88 @@ function updateCustomFieldsHidden(editor) {
 
 });
 
-// Global functions for image handling
-function showImageModal(imageUrl, title) {
-    // Create a simple modal without Bootstrap dependency
-    if (!$('#imageModal').length) {
-        var modal = $('<div id="imageModal"></div>')
-            .css({
-                'position': 'fixed',
-                'top': '0',
-                'left': '0', 
-                'width': '100%',
-                'height': '100%',
-                'background': 'rgba(0,0,0,0.8)',
-                'z-index': '9999',
-                'display': 'none'
-            });
-            
-        var content = $('<div></div>')
-            .css({
-                'position': 'absolute',
-                'top': '50%',
-                'left': '50%',
-                'transform': 'translate(-50%, -50%)',
-                'background': 'white',
-                'padding': '20px',
-                'border-radius': '8px',
-                'max-width': '90%',
-                'max-height': '90%'
-            });
-            
-        var header = $('<div></div>')
-            .css({
-                'display': 'flex',
-                'justify-content': 'space-between',
-                'align-items': 'center',
-                'margin-bottom': '15px'
-            });
-            
-        var titleElement = $('<h5></h5>')
-            .css('margin', '0')
-            .text(title);
-            
-        var closeButton = $('<button type="button">×</button>')
-            .css({
-                'background': 'none',
-                'border': 'none',
-                'font-size': '24px',
-                'cursor': 'pointer'
-            })
-            .click(function() {
-                $('#imageModal').hide();
-            });
-            
-        var image = $('<img>')
-            .attr('src', imageUrl)
-            .css({
-                'max-width': '100%',
-                'max-height': '70vh',
-                'display': 'block'
-            });
-            
-        header.append(titleElement, closeButton);
-        content.append(header, image);
-        modal.append(content);
-        $('body').append(modal);
-        
-        // Close on background click
-        modal.click(function(e) {
-            if (e.target === this) {
-                $(this).hide();
-            }
-        });
-    } else {
-        // Update existing modal
-        $('#imageModal h5').text(title);
-        $('#imageModal img').attr('src', imageUrl);
-    }
-    $('#imageModal').show();
-}
 
-function removeImage(button, index) {
-    var container = $(button).closest('.image-upload-zone');
-    var images = JSON.parse(container.find('input[name="images"]').val() || '[]');
-    images.splice(index, 1);
-    updateImageDisplay(container, images);
-}
-
-function updateImageDisplay(container, images) {
-    var html = '';
-    if (images.length > 0) {
-        html = images.map((img, index) => 
-                `<div style="position: relative; display: inline-block; margin-right: 8px; margin-bottom: 8px;">
-                <img src="${img.url_standard || img.url_zoom || img.url_thumbnail}" 
-                         class="image-thumbnail-small" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 2px solid #e0e0e0;">
-                    <button type="button" class="remove-image-btn" 
-                            data-index="${index}" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer;">×</button>
-            </div>`
-        ).join('');
-    } else {
-            html = '<em style="color: #666;">No images</em>';
-    }
-    container.find('.current-images').html(html);
-    container.find('input[name="images"]').val(JSON.stringify(images));
-}
-
-function handleImageFiles(files, container) {
-    var images = JSON.parse(container.find('input[name="images"]').val() || '[]');
+// Helper functions for transfer functionality
+function getSourceValue(sourceCell, targetInput) {
     
-    Array.from(files).forEach(function(file) {
-        if (file.type.startsWith('image/')) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var newImage = {
-                    url_standard: e.target.result,
-                    url_zoom: e.target.result,
-                    url_thumbnail: e.target.result,
-                    is_new: true
-                };
-                images.push(newImage);
-                updateImageDisplay(container, images);
-            };
-            reader.readAsDataURL(file);
+    // For regular text inputs and textareas
+    if (targetInput.is('input[type="text"], input[type="number"], textarea')) {
+        var sourceText = sourceCell.text().trim();
+        // Remove any extra whitespace and return clean value
+        return sourceText === 'N/A' || sourceText === '' ? '' : sourceText;
+    }
+    
+    return null;
+}
+
+function transferCustomFields() {
+    // Handle custom fields transfer
+    var sourceCustomFields = [];
+    var targetEditor = $('.custom-fields-editor');
+    
+    if (targetEditor.length > 0) {
+        // Find source custom fields data from table
+        var sourceTable = $('.source-cell').find('.custom-fields-table table tbody tr');
+        
+        if (sourceTable.length > 0) {
+            // Extract custom fields from the source table
+            sourceTable.each(function() {
+                var name = $(this).find('td:first-child').text().trim();
+                var value = $(this).find('td:last-child').text().trim();
+                
+                if (name && value) {
+                    sourceCustomFields.push({
+                        name: name,
+                        value: value
+                    });
+                }
+            });
+            
+            // Clear existing custom fields and add source fields
+            var tbody = targetEditor.find('.custom-fields-tbody');
+            tbody.empty();
+            
+            sourceCustomFields.forEach(function(field, index) {
+                var newRow = `
+                    <tr class="custom-field-row" data-index="${index}">
+                        <td>
+                            <input type="text" class="form-control custom-field-name" 
+                                   value="${field.name}" placeholder="Field name...">
+                            <span class="badge bg-success" style="font-size: 9px;">NEW</span>
+                            <input type="hidden" class="custom-field-id" value="">
+                        </td>
+                        <td>
+                            <input type="text" class="form-control custom-field-value" 
+                                      placeholder="Field value..." value="${field.value}">
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-custom-field" title="Remove field">
+                                ×
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                
+                tbody.append(newRow);
+            });
+            
+            updateCustomFieldsHidden(targetEditor);
         }
-    });
+    }
+}
+
+function showTransferConfirmation() {
+    // Show a brief confirmation message
+    var confirmationHtml = '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+        '<strong>Transfer Complete!</strong> All field values have been copied from the source product to the target product.' +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+        '</div>';
+    
+    // Insert the confirmation at the top of the comparison container
+    $('.comparison-container').prepend(confirmationHtml);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(function() {
+        $('.alert-success').fadeOut();
+    }, 3000);
 } 
