@@ -13,6 +13,10 @@
             <h1>
                 BigCommerce Product Import Tool
             </h1>
+            <div class="user-info">
+                <span>Welcome, {{ user.email }}!</span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
         </div>
 
         <!-- Navigation Tabs -->

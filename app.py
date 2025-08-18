@@ -1,9 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from bigcommerce_import_tool import ProductImporter
 import os
 import tempfile
 from dotenv import load_dotenv
 import requests
+import json
 
 load_dotenv()
 
@@ -19,14 +22,96 @@ for store in ['WILSON_US', 'SIGNAL_US', 'WILSON_CA', 'SIGNAL_CA']:
     print(f'{client_var}: {"✓" if os.getenv(client_var) else "✗"}')
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+# Simple in-memory user store (replace with database in production)
+users_db = {}
+
+# Load users from environment or create default admin user
+def init_users():
+    # Try to load users from environment variables
+    admin_email = os.getenv('ADMIN_EMAIL', 'merchandising@silkworldwide.com')
+    admin_password = os.getenv('ADMIN_PASSWORD', 'T!t@n2025')
+    
+    if admin_email not in users_db:
+        users_db[admin_email] = {
+            'id': '1',
+            'email': admin_email,
+            'password_hash': generate_password_hash(admin_password),
+            'name': 'Administrator',
+            'is_admin': True
+        }
+        print(f"Created default admin user: {admin_email}")
+
+class User(UserMixin):
+    def __init__(self, user_data):
+        self.id = user_data['id']
+        self.email = user_data['email']
+        self.name = user_data['name']
+        self.is_admin = user_data.get('is_admin', False)
+    
+    def check_password(self, password):
+        user_data = users_db.get(self.email)
+        if user_data:
+            return check_password_hash(user_data['password_hash'], password)
+        return False
+
+@login_manager.user_loader
+def load_user(user_id):
+    for email, user_data in users_db.items():
+        if user_data['id'] == user_id:
+            return User(user_data)
+    return None
+
+# Initialize users on startup
+init_users()
 
 importer = ProductImporter()
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        
+        if not email or not password:
+            flash("Please enter both email and password.", "error")
+            return render_template("login.html")
+        
+        user_data = users_db.get(email)
+        if user_data and check_password_hash(user_data['password_hash'], password):
+            user = User(user_data)
+            login_user(user, remember=True)
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+        else:
+            flash("Invalid email or password.", "error")
+    
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out successfully.", "success")
+    return redirect(url_for('login'))
+
+
+
 @app.route("/", methods=["GET"])
+@login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html", user=current_user)
 
 @app.route("/import", methods=["POST"])
+@login_required
 def import_sku():
     sku = request.form.get("sku")
     source_store = request.form.get("source_store")
@@ -48,6 +133,7 @@ def import_sku():
         return jsonify({"success": False, "error": str(e)})
 
 @app.route("/batch_import", methods=["POST"])
+@login_required
 def batch_import():
     source_store = request.form.get("source_store")
     target_store = request.form.get("target_store")
@@ -76,6 +162,7 @@ def batch_import():
     return jsonify({"success": True, "results": results})
 
 @app.route("/stores", methods=["GET"])
+@login_required
 def get_stores():
     """Get list of all available stores"""
     return jsonify({
@@ -84,6 +171,7 @@ def get_stores():
     })
 
 @app.route("/compare", methods=["POST"])
+@login_required
 def compare():
     store_a = request.form.get("store_a", "wilson_us")
     store_b = request.form.get("store_b", "signal_ca")
@@ -132,6 +220,7 @@ def compare():
         return jsonify({"success": False, "error": f"Error comparing products: {str(e)}"})
 
 @app.route("/get_product", methods=["POST"])
+@login_required
 def get_product():
     store = request.form.get("store")
     sku = request.form.get("sku")
@@ -154,6 +243,7 @@ def get_product():
 
 
 @app.route("/update_target", methods=["POST"])
+@login_required
 def update_target():
     store_a = request.form.get("store_a")
     store_b = request.form.get("store_b")

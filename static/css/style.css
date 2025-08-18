@@ -32,6 +32,7 @@ body {
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
 }
 
 .header h1 {
@@ -44,6 +45,37 @@ body {
 .header p {
     font-size: 1.1rem;
     color: #666;
+}
+
+/* User Info */
+.user-info {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.9rem;
+}
+
+.user-info span {
+    color: #333;
+    font-weight: 500;
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 0.875rem;
+    transition: background-color 0.2s;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+    text-decoration: none;
 }
 
 
