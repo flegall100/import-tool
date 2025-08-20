@@ -222,6 +222,15 @@ class ProductImporter:
             "brand": product.get("brand", "")
         }
         
+        # Debug logging for custom fields
+        custom_fields = product.get("custom_fields", [])
+        if custom_fields:
+            print(f"=== DEBUG: Found {len(custom_fields)} custom fields in source product ===")
+            for cf in custom_fields:
+                print(f"  - {cf.get('name', 'Unknown')}: {cf.get('value', 'N/A')}")
+        else:
+            print(f"=== DEBUG: No custom fields found in source product ===")
+        
         return extracted_data
     
     def prepare_product_for_import(self, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -248,6 +257,11 @@ class ProductImporter:
             import_data["gtin"] = extracted_data["gtin"]
         if extracted_data.get("categories"):
             import_data["categories"] = extracted_data["categories"]
+        if extracted_data.get("custom_fields"):
+            import_data["custom_fields"] = extracted_data["custom_fields"]
+            print(f"=== DEBUG: Including {len(extracted_data['custom_fields'])} custom fields in import ===")
+            for cf in extracted_data["custom_fields"]:
+                print(f"  - {cf.get('name', 'Unknown')}: {cf.get('value', 'N/A')}")
             
         return import_data
     
