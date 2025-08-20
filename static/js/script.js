@@ -800,7 +800,11 @@ function transferCustomFields() {
                 tbody.append(newRow);
             });
             
-            updateCustomFieldsHidden(targetEditor);
+            if (typeof updateCustomFieldsHidden === 'function') {
+                updateCustomFieldsHidden(targetEditor);
+            } else {
+                console.warn('updateCustomFieldsHidden function not available, skipping custom fields update');
+            }
         }
     }
 }
