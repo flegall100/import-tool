@@ -588,32 +588,6 @@ $(document).on('input', '.custom-field-name, .custom-field-value', function() {
     updateCustomFieldsHidden(editor);
 });
 
-function updateCustomFieldsHidden(editor) {
-    var customFields = [];
-    
-    editor.find('.custom-fields-tbody tr').each(function() {
-        var name = $(this).find('.custom-field-name').val().trim();
-        var value = $(this).find('.custom-field-value').val().trim();
-        var id = $(this).find('.custom-field-id').val().trim();
-        
-        if (name || value) { // Only add if name or value is not empty
-            var fieldData = {
-                name: name,
-                value: value
-            };
-            
-            // Preserve the original ID if it exists (for updating existing fields)
-            if (id) {
-                fieldData.id = parseInt(id);
-            }
-            
-            customFields.push(fieldData);
-        }
-    });
-    
-    editor.find('.custom-fields-hidden').val(JSON.stringify(customFields));
-}
-
     // Update Target Store button click
     $(document).on('click', '#update-target-btn', function(e) {
         e.preventDefault();
@@ -737,6 +711,32 @@ function updateCustomFieldsHidden(editor) {
 
 
 // Helper functions for transfer functionality
+function updateCustomFieldsHidden(editor) {
+    var customFields = [];
+    
+    editor.find('.custom-fields-tbody tr').each(function() {
+        var name = $(this).find('.custom-field-name').val().trim();
+        var value = $(this).find('.custom-field-value').val().trim();
+        var id = $(this).find('.custom-field-id').val().trim();
+        
+        if (name || value) { // Only add if name or value is not empty
+            var fieldData = {
+                name: name,
+                value: value
+            };
+            
+            // Preserve the original ID if it exists (for updating existing fields)
+            if (id) {
+                fieldData.id = parseInt(id);
+            }
+            
+            customFields.push(fieldData);
+        }
+    });
+    
+    editor.find('.custom-fields-hidden').val(JSON.stringify(customFields));
+}
+
 function getSourceValue(sourceCell, targetInput) {
     
     // For regular text inputs and textareas
